@@ -326,22 +326,20 @@ app.get('/api/sync/download', authMiddleware, async (req, res) => {
   }
 });
 
-// ===== 启动服务 =====
-async function start() {
-  try {
-    await initDb();
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log('========================================');
-      console.log('  LumenFlow 云端同步服务已启动');
-      console.log('  端口: ' + PORT);
-      console.log('  健康检查: http://localhost:' + PORT + '/api/health');
-      console.log('========================================');
-    });
-  } catch (e) {
-    console.error('启动失败:', e.message);
-    console.error('请检查 DATABASE_URL 是否配置正确');
-    process.exit(1);
-  }
-}
+// ===== Vercel Serverless 导出 =====
+let _dbReady = false;
 
-start();
+module.exports = async (req, res) => {
+  try {
+    if (!_dbReady) {
+      await initDb();
+      _dbReady = true;
+      console.log('LumenFlow 云端同步服务已启动');
+    }
+    app(req, res);
+  } catch (e) {
+    console.error('初始化失败：', e.message);
+    res.status(500).json({ error: '服务器初始化失败，请检查 DATABASE_URL' });
+  }
+};
+
